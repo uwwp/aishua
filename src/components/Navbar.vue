@@ -84,7 +84,7 @@
         </nav>
 
         <!-- Right: Status & Actions -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5">
           <!-- 打卡天数徽章 -->
           <div 
             v-if="quizStore.streakDays > 0"
@@ -95,19 +95,44 @@
             <span>打卡 {{ quizStore.streakDays }} 天</span>
           </div>
 
-          <!-- Supabase 云端同步状态胶囊按钮 -->
+          <!-- 云端同步状态胶囊按钮 -->
           <button 
             @click="isSyncModalOpen = true"
             :class="[
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
-              authStore.syncStatus === 'synced' 
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' 
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
+              authStore.isAuthenticated 
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100 shadow-2xs' 
                 : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
             ]"
-            title="点击管理 Supabase 云端同步"
+            :title="authStore.isAuthenticated ? `当前登录账号：${authStore.userEmail}` : '点击注册/登录账号开启云端同步'"
           >
-            <span class="w-2 h-2 rounded-full" :class="authStore.syncStatus === 'synced' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>
-            <span>{{ authStore.syncStatus === 'synced' ? '云端已同步' : '本地离线' }}</span>
+            <span 
+              class="w-2 h-2 rounded-full shrink-0" 
+              :class="[
+                authStore.isAuthenticated 
+                  ? (authStore.syncStatus === 'syncing' ? 'bg-amber-500 animate-spin' : 'bg-emerald-500 animate-pulse') 
+                  : 'bg-slate-400'
+              ]"
+            ></span>
+            <span>
+              {{ 
+                authStore.isAuthenticated 
+                  ? (authStore.syncStatus === 'syncing' ? '正在同步...' : '云端已同步') 
+                  : '本地未登录' 
+              }}
+            </span>
+          </button>
+
+          <!-- 快捷手动同步小按钮 (仅登录用户显示) -->
+          <button
+            v-if="authStore.isAuthenticated"
+            @click="triggerManualSync"
+            :disabled="isSyncing"
+            class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-semibold flex items-center gap-1 transition-colors"
+            title="一键手动全量同步全部 832 题数据到云端"
+          >
+            <span :class="{ 'animate-spin': isSyncing }">🔄</span>
+            <span class="hidden sm:inline text-[11px]">手动同步</span>
           </button>
 
           <!-- 设置入口 -->
@@ -156,4 +181,17 @@ import SyncModal from './SyncModal.vue'
 const quizStore = useQuizStore()
 const authStore = useAuthStore()
 const isSyncModalOpen = ref(false)
+const isSyncing = ref(false)
+
+async function triggerManualSync() {
+  isSyncing.value = true
+  try {
+    await quizStore.performManualSync()
+    alert('已成功执行手动全量同步！云端数据与本地已完全一致。')
+  } catch (err) {
+    alert('手动同步失败: ' + err.message)
+  } finally {
+    isSyncing.value = false
+  }
+}
 </script>

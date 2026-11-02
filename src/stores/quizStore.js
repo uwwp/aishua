@@ -52,6 +52,8 @@ export const useQuizStore = defineStore('quiz', () => {
     const client = getSupabaseClient()
     if (!client) return
 
+    authStore.syncStatus = 'syncing'
+
     try {
       const { data, error } = await client
         .from('user_question_progress')
@@ -59,12 +61,12 @@ export const useQuizStore = defineStore('quiz', () => {
         .eq('user_id', authStore.user.id)
 
       if (error) {
-        console.warn('Cloud progress fetch failed (table might not exist yet):', error.message)
+        console.warn('Cloud progress fetch failed:', error.message)
+        authStore.syncStatus = 'synced'
         return
       }
 
       if (data && data.length > 0) {
-        // 合并云端与本地：以较新的 updated_at 或更高复习次数为准
         data.forEach(item => {
           const qId = item.question_id
           const local = progressMap.value[qId]
@@ -83,15 +85,16 @@ export const useQuizStore = defineStore('quiz', () => {
         })
         saveLocalProgress()
       } else {
-        // 如果云端为空但本地有数据，则将本地数据一键推送到云端
         await syncLocalToCloud()
       }
+      authStore.recordSyncSuccess()
     } catch (err) {
       console.warn('Sync from cloud error:', err)
+      authStore.syncStatus = 'synced'
     }
   }
 
-  // 云端同步：将本地已做题目全量上传至用户 Supabase 账户
+  // 云端同步：将本地已做题目全量上传至用户云端账户
   async function syncLocalToCloud() {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return
@@ -112,23 +115,40 @@ export const useQuizStore = defineStore('quiz', () => {
       updated_at: new Date().toISOString()
     }))
 
-    if (!items.length) return
+    if (!items.length) {
+      authStore.recordSyncSuccess()
+      return
+    }
+
+    authStore.syncStatus = 'syncing'
 
     try {
-      // 批量分块上传 (每批 100 条)
       for (let i = 0; i < items.length; i += 100) {
         const chunk = items.slice(i, i + 100)
         await client.from('user_question_progress').upsert(chunk, { onConflict: 'user_id,question_id' })
       }
+      authStore.recordSyncSuccess()
     } catch (err) {
       console.warn('Batch upload local progress failed:', err)
+      authStore.syncStatus = 'synced'
     }
   }
 
-  // 云端同步：异步推送单题进度 (未注册用户严格禁止上传云端)
+  // 手动全量同步 (拉取云端合并后推送到云端)
+  async function performManualSync() {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) {
+      throw new Error('请先注册或登录账号，未登录无法同步至云端')
+    }
+    await syncFromCloud()
+    await syncLocalToCloud()
+    return true
+  }
+
+  // 云端同步：做题时异步自动推送 (受 isAutoSync 开关控制)
   async function pushProgressToCloud(progress) {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
+    if (!authStore.isAuthenticated || !authStore.isAutoSync) return
 
     const client = getSupabaseClient()
     if (!client) return
@@ -146,6 +166,7 @@ export const useQuizStore = defineStore('quiz', () => {
         in_wrong_book: progress.in_wrong_book,
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id,question_id' })
+      authStore.recordSyncSuccess()
     } catch (err) {
       console.warn('Silent cloud sync failed:', err)
     }
@@ -174,7 +195,6 @@ export const useQuizStore = defineStore('quiz', () => {
       wrong_count: isCorrect ? (current.wrong_count || 0) : (current.wrong_count || 0) + 1,
       last_reviewed_at: new Date().toISOString(),
       next_review_at: nextReviewAt,
-      // 答错自动进错题本，连续答对达到 Stage 3 及以上可自动移出租题本（也可以手动移出）
       in_wrong_book: isCorrect ? (nextStage >= 3 ? false : current.in_wrong_book) : true,
     }
 
@@ -244,37 +264,31 @@ export const useQuizStore = defineStore('quiz', () => {
 
   const totalCount = computed(() => questions.value.length) // 832
 
-  // 已学过至少一次的题量
   const learnedCount = computed(() => {
     return Object.values(progressMap.value).filter(p => (p.review_count || 0) > 0).length
   })
 
-  // 尚未学过的题量
   const unlearnedCount = computed(() => totalCount.value - learnedCount.value)
 
-  // 艾宾浩斯彻底掌握题量 (Stage 6)
   const masteredCount = computed(() => {
     return Object.values(progressMap.value).filter(p => p.stage === 6).length
   })
 
-  // 正在记忆巩固中的题量 (Stage 1 ~ 5)
   const learningCount = computed(() => {
     return Object.values(progressMap.value).filter(p => p.stage >= 1 && p.stage <= 5).length
   })
 
-  // 今日到期需复习的题量
   const dueTodayQuestions = computed(() => {
     return questions.value.filter(q => {
       const p = progressMap.value[q.id]
-      if (!p || (p.review_count || 0) === 0) return false // 未学过的算新题，不算复习题
-      if (p.stage === 6) return false // 已彻底掌握移出常规复习
+      if (!p || (p.review_count || 0) === 0) return false
+      if (p.stage === 6) return false
       return isQuestionDue(p.next_review_at)
     })
   })
 
   const dueTodayCount = computed(() => dueTodayQuestions.value.length)
 
-  // 今日新题推荐候选列表 (取未学过的题)
   const newQuestions = computed(() => {
     return questions.value.filter(q => {
       const p = progressMap.value[q.id]
@@ -282,7 +296,6 @@ export const useQuizStore = defineStore('quiz', () => {
     })
   })
 
-  // 错题本题目列表
   const wrongQuestions = computed(() => {
     return questions.value.filter(q => {
       const p = progressMap.value[q.id]
@@ -290,7 +303,6 @@ export const useQuizStore = defineStore('quiz', () => {
     })
   })
 
-  // 收藏题目列表
   const favoriteQuestions = computed(() => {
     return questions.value.filter(q => {
       const p = progressMap.value[q.id]
@@ -298,7 +310,6 @@ export const useQuizStore = defineStore('quiz', () => {
     })
   })
 
-  // 艾宾浩斯各阶段分布统计 [Stage 0..6]
   const stageDistribution = computed(() => {
     const dist = [0, 0, 0, 0, 0, 0, 0]
     questions.value.forEach(q => {
@@ -313,7 +324,6 @@ export const useQuizStore = defineStore('quiz', () => {
     return dist
   })
 
-  // 5大所属部分统计
   const categoryStats = computed(() => {
     const parts = [
       '第一部分形势政策',
@@ -352,7 +362,6 @@ export const useQuizStore = defineStore('quiz', () => {
     })
   })
 
-  // 3大题型统计
   const typeStats = computed(() => {
     const types = ['单选题', '多选题', '判断题']
     return types.map(typeName => {
@@ -382,14 +391,12 @@ export const useQuizStore = defineStore('quiz', () => {
     })
   })
 
-  // 连续打卡天数计算
   const streakDays = computed(() => {
     const dates = Object.keys(dailyLogs.value).sort().reverse()
     if (!dates.length) return 0
     let streak = 0
     let checkDate = new Date()
 
-    // 检查今天或昨天是否有刷题记录
     const todayStr = checkDate.toISOString().split('T')[0]
     let currentCheckStr = todayStr
 
@@ -409,13 +416,11 @@ export const useQuizStore = defineStore('quiz', () => {
     return streak
   })
 
-  // 今日已刷题数
   const todayAnsweredCount = computed(() => {
     const today = new Date().toISOString().split('T')[0]
     return dailyLogs.value[today]?.total || 0
   })
 
-  // 初始化执行
   loadLocalProgress()
 
   return {
@@ -443,6 +448,7 @@ export const useQuizStore = defineStore('quiz', () => {
     clearWrongBook,
     resetAllProgress,
     syncFromCloud,
-    syncLocalToCloud
+    syncLocalToCloud,
+    performManualSync
   }
 })

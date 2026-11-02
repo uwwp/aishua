@@ -5,10 +5,10 @@
       <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
-            ⚡
+            ☁️
           </div>
           <div>
-            <h3 class="font-bold text-slate-800 text-sm">Supabase 云端同步与账号</h3>
+            <h3 class="font-bold text-slate-800 text-sm">云端多端同步与账号</h3>
             <p class="text-[11px] text-slate-400">登录账号即可将本地 832 题学习进度自动备份至云端</p>
           </div>
         </div>
@@ -31,13 +31,13 @@
           ]"
         >
           <div class="flex items-center gap-2.5">
-            <span class="text-xl">{{ authStore.isAuthenticated ? '☁️' : '🔒' }}</span>
+            <span class="text-xl">{{ authStore.isAuthenticated ? '🟢' : '⚪' }}</span>
             <div>
               <div class="font-bold text-sm">
-                {{ authStore.isAuthenticated ? '已连接云端同步' : '未注册登录（仅本地存储）' }}
+                {{ authStore.isAuthenticated ? '云端多端同步已连接' : '本地离线模式 (未登录)' }}
               </div>
               <div class="text-[11px] opacity-80 mt-0.5">
-                {{ authStore.isAuthenticated ? `当前绑定邮箱：${authStore.userEmail}` : '未注册登录不允许存在云端，进度仅保存在当前浏览器中' }}
+                {{ authStore.isAuthenticated ? `当前绑定邮箱：${authStore.userEmail}` : '未注册登录不允许同步云端，进度仅保存在当前浏览器中' }}
               </div>
             </div>
           </div>
@@ -46,42 +46,75 @@
             @click="handleSignOut"
             class="px-2.5 py-1 bg-white border border-emerald-300 text-emerald-800 rounded-lg hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 transition-colors shrink-0 font-medium"
           >
-            退出登录
+            退出账号
           </button>
         </div>
 
-        <!-- IP 检测与安全状态卡片 -->
-        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-          <div class="flex items-center gap-2">
-            <span class="text-slate-500">🌐 客户端 IP:</span>
-            <span class="font-mono font-bold text-slate-700">{{ authStore.currentIp || '正在解析...' }}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span 
-              :class="[
-                'px-2 py-0.5 rounded-md font-semibold text-[11px]',
-                authStore.ipBlocked 
-                  ? 'bg-rose-100 text-rose-700' 
-                  : (authStore.remainingAttempts < 5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')
-              ]"
-            >
-              {{ authStore.ipBlocked ? '该IP已被系统拉黑' : `剩余注册机会: ${authStore.remainingAttempts} 次` }}
-            </span>
+        <!-- 已经登录状态下：展示同步控制选项 -->
+        <div v-if="authStore.isAuthenticated" class="space-y-4">
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="font-bold text-slate-800 text-sm">⚡ 实时自动同步</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">每次做题、复习后自动在后台推送至云端</div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  :checked="authStore.isAutoSync" 
+                  @change="authStore.setAutoSync($event.target.checked)" 
+                  class="sr-only peer"
+                />
+                <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+
+            <div class="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+              <span class="text-slate-500">上次全量同步：{{ authStore.lastSyncTime || '刚刚' }}</span>
+              <button
+                @click="manualSync"
+                :disabled="isSyncing"
+                class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <span :class="{ 'animate-spin': isSyncing }">🔄</span>
+                <span>{{ isSyncing ? '正在全量同步...' : '立即手动同步' }}</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- IP 被拉黑警告大横幅 -->
-        <div v-if="authStore.ipBlocked" class="p-4 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 text-xs space-y-1.5 animate-pulse">
-          <div class="font-bold text-sm flex items-center gap-1.5">
-            <span>🚫</span> 该 IP 已被系统封锁！
+        <!-- 未登录状态下：IP 状态与登录注册表单 -->
+        <div v-else class="space-y-4">
+          <!-- IP 检测与安全状态卡片 -->
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-500">🌐 客户端 IP:</span>
+              <span class="font-mono font-bold text-slate-700">{{ authStore.currentIp || '正在解析...' }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span 
+                :class="[
+                  'px-2 py-0.5 rounded-md font-semibold text-[11px]',
+                  authStore.ipBlocked 
+                    ? 'bg-rose-100 text-rose-700' 
+                    : (authStore.remainingAttempts < 5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')
+                ]"
+              >
+                {{ authStore.ipBlocked ? '该IP已被系统拉黑' : `剩余注册机会: ${authStore.remainingAttempts} 次` }}
+              </span>
+            </div>
           </div>
-          <p class="leading-relaxed">
-            因连续 <strong>5 次输入错误的注册授权码</strong>，系统已判定存在暴力破解风险并拉黑您的 IP 地址 ({{ authStore.currentIp }})。该 IP 已无法进行新用户注册！
-          </p>
-        </div>
 
-        <!-- 未登录时：登录与注册 Tab -->
-        <div v-if="!authStore.isAuthenticated" class="space-y-4 pt-1">
+          <!-- IP 被拉黑警告大横幅 -->
+          <div v-if="authStore.ipBlocked" class="p-4 rounded-2xl bg-rose-50 border border-rose-300 text-rose-900 text-xs space-y-1.5 animate-pulse">
+            <div class="font-bold text-sm flex items-center gap-1.5">
+              <span>🚫</span> 该 IP 已被系统封锁！
+            </div>
+            <p class="leading-relaxed">
+              因连续 <strong>5 次输入错误的注册授权码</strong>，系统已拉黑您的 IP 地址 ({{ authStore.currentIp }})。该 IP 已无法进行新用户注册！
+            </p>
+          </div>
+
           <!-- Tab 切换 -->
           <div class="grid grid-cols-2 p-1 bg-slate-100 rounded-xl text-xs font-bold">
             <button
@@ -133,7 +166,7 @@
             </button>
           </div>
 
-          <!-- 2. 注册表单 (带授权码校验与防暴力破解) -->
+          <!-- 2. 注册表单 -->
           <div v-else class="space-y-3">
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">注册邮箱</label>
@@ -185,40 +218,18 @@
             </button>
           </div>
         </div>
-
-        <!-- 已登录用户的同步与备份状态 -->
-        <div v-else class="space-y-4">
-          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
-            <div class="font-bold text-slate-700 flex items-center justify-between">
-              <span>📊 当前用户云端进度</span>
-              <span class="text-emerald-600 font-bold">832 题自动同步中</span>
-            </div>
-            <p class="text-slate-500 leading-relaxed">
-              每次作答、艾宾浩斯复习与错题收录均会在后台自动与 Supabase 保持一致，更换浏览器或设备登录同个邮箱即可无缝继续。
-            </p>
-            <div class="pt-2 flex gap-2">
-              <button
-                @click="manualSync"
-                :disabled="isSyncing"
-                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors"
-              >
-                {{ isSyncing ? '正在同步...' : '🔄 立即强制双向同步' }}
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Footer -->
       <div class="px-6 py-3 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between text-xs">
         <span class="text-slate-400">
-          Supabase Free PostgreSQL
+          云端数据中心
         </span>
         <button 
           @click="$emit('close')" 
           class="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-semibold transition-colors"
         >
-          关闭
+          完成
         </button>
       </div>
     </div>
@@ -256,9 +267,9 @@ async function handleSignIn() {
   isLoading.value = true
   try {
     await authStore.signInWithEmail(loginEmail.value, loginPassword.value)
-    // 登录成功后拉取/同步本地与云端进度
     await quizStore.syncFromCloud()
-    alert('登录成功！已成功启用 Supabase 云端同步。')
+    alert('登录成功！已成功启用云端数据同步。')
+    emit('close')
   } catch (err) {
     alert('登录失败: ' + (err.message || '请检查邮箱与密码'))
   } finally {
@@ -282,10 +293,10 @@ async function handleSignUp() {
 
   isLoading.value = true
   try {
-    const res = await authStore.signUpWithEmail(regEmail.value, regPassword.value, regAuthCode.value)
-    // 注册并自动登录，将本地已有数据推送到云端
+    await authStore.signUpWithEmail(regEmail.value, regPassword.value, regAuthCode.value)
+    // 注册成功后全量上传本地已做记录
     await quizStore.syncLocalToCloud()
-    alert('注册成功！您的 832 题学习数据已成功同步至 Supabase 云端。')
+    alert('注册成功！已为您自动登录，本地 832 题学习进度已同步至云端。')
     emit('close')
   } catch (err) {
     alert(err.message || '注册发生错误，请稍后重试')
@@ -304,8 +315,8 @@ async function handleSignOut() {
 async function manualSync() {
   isSyncing.value = true
   try {
-    await quizStore.syncFromCloud()
-    alert('云端与本地数据已同步完成！')
+    await quizStore.performManualSync()
+    alert('云端与本地 832 题数据已全量同步完成！')
   } catch (e) {
     alert('同步失败: ' + e.message)
   } finally {

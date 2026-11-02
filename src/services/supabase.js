@@ -41,22 +41,22 @@ CREATE TABLE IF NOT EXISTS public.registration_ip_blacklist (
     last_attempt_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 4. 启用行级权限安全 (RLS)
+-- 4. 创建系统注册用户表 (支持免邮箱二次验证直连登录)
+CREATE TABLE IF NOT EXISTS public.app_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    last_login_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 5. 启用行级权限安全 (RLS)
 ALTER TABLE public.user_question_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quiz_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.registration_ip_blacklist ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
 
--- 5. 权限策略
-CREATE POLICY "Users manage own progress" 
-ON public.user_question_progress FOR ALL 
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users manage own logs" 
-ON public.quiz_logs FOR ALL 
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
-
+-- 6. 权限策略 (允许注册用户与客户端数据同步)
 CREATE POLICY "Allow public read blacklist" 
 ON public.registration_ip_blacklist FOR SELECT 
 TO anon, authenticated 
@@ -64,6 +64,24 @@ USING (true);
 
 CREATE POLICY "Allow public update blacklist" 
 ON public.registration_ip_blacklist FOR ALL 
+TO anon, authenticated 
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow user manage progress" 
+ON public.user_question_progress FOR ALL 
+TO anon, authenticated 
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow user manage logs" 
+ON public.quiz_logs FOR ALL 
+TO anon, authenticated 
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow app users auth" 
+ON public.app_users FOR ALL 
 TO anon, authenticated 
 USING (true)
 WITH CHECK (true);
@@ -116,7 +134,7 @@ export async function getClientIp() {
       if (data?.ip) return data.ip
     }
   } catch (e) {
-    // 备用获取方式
+    // 备用方式
   }
 
   try {
@@ -129,7 +147,6 @@ export async function getClientIp() {
     // ignore
   }
 
-  // 若无法获取公网IP，使用本地浏览器指纹作为设备标识
   let localId = localStorage.getItem('dianwang_device_id')
   if (!localId) {
     localId = 'device_' + Math.random().toString(36).substring(2, 10)
@@ -142,14 +159,12 @@ export async function getClientIp() {
  * 检查指定 IP 是否被拉黑及输错次数
  */
 export async function checkIpStatus(ip) {
-  // 1. 本地缓存检查 (防止网络断开时绕过)
   const localKey = `ip_attempts_${ip}`
   const localData = JSON.parse(localStorage.getItem(localKey) || '{"failed_count":0,"is_blocked":false}')
   if (localData.is_blocked || localData.failed_count >= MAX_AUTH_ATTEMPTS) {
     return { isBlocked: true, failedCount: localData.failed_count, remaining: 0 }
   }
 
-  // 2. 云端 Supabase 检查
   const client = getSupabaseClient()
   if (client) {
     try {
@@ -161,7 +176,6 @@ export async function checkIpStatus(ip) {
 
       if (!error && data) {
         if (data.is_blocked || data.failed_count >= MAX_AUTH_ATTEMPTS) {
-          // 同步到本地
           localStorage.setItem(localKey, JSON.stringify({ failed_count: data.failed_count, is_blocked: true }))
           return { isBlocked: true, failedCount: data.failed_count, remaining: 0 }
         }
@@ -192,10 +206,8 @@ export async function recordFailedAttempt(ip) {
   const newCount = (localData.failed_count || 0) + 1
   const isNowBlocked = newCount >= MAX_AUTH_ATTEMPTS
 
-  // 写入本地存储
   localStorage.setItem(localKey, JSON.stringify({ failed_count: newCount, is_blocked: isNowBlocked }))
 
-  // 写入 Supabase 云端
   const client = getSupabaseClient()
   if (client) {
     try {
@@ -204,7 +216,7 @@ export async function recordFailedAttempt(ip) {
         failed_count: newCount,
         is_blocked: isNowBlocked,
         last_attempt_at: new Date().toISOString()
-      }, { credentials: 'omit' })
+      })
     } catch (e) {
       console.warn('Sync blacklist to cloud failed:', e)
     }
@@ -235,18 +247,13 @@ export async function resetIpAttempts(ip) {
 }
 
 /**
- * 测试 Supabase API 连通性
+ * 测试云端 API 连通性
  */
 export async function testSupabaseConnection() {
   const client = getSupabaseClient()
-  if (!client) return { ok: false, error: '客户端未初始化，请检查 URL 和 Key' }
+  if (!client) return { ok: false, error: '客户端未初始化，请检查配置' }
 
   try {
-    const { error: authErr } = await client.auth.getSession()
-    if (authErr) {
-      return { ok: false, error: authErr.message }
-    }
-
     const { error: tableErr } = await client
       .from('user_question_progress')
       .select('question_id')
@@ -257,13 +264,13 @@ export async function testSupabaseConnection() {
         return {
           ok: true,
           tableMissing: true,
-          message: 'Supabase API 连通成功！但检测到数据库尚未执行建表 SQL，请在 Supabase SQL Editor 执行建表脚本。'
+          message: '云端服务连通成功！但检测到数据库尚未执行建表 SQL，请在控制台 SQL Editor 执行初始化脚本。'
         }
       }
       return { ok: false, error: tableErr.message }
     }
 
-    return { ok: true, tableMissing: false, message: 'Supabase 云端服务与数据库表状态一切正常！' }
+    return { ok: true, tableMissing: false, message: '云端数据库服务与数据表状态一切正常！' }
   } catch (err) {
     return { ok: false, error: err.message || '网络连接异常' }
   }

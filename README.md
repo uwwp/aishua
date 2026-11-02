@@ -1,6 +1,6 @@
 # 电网智刷 · 艾宾浩斯抗遗忘智能刷题系统 ⚡
 
-基于 **Vue 3 + Tailwind CSS + Pinia + Supabase Free** 构建的备考题库系统，采用经典**艾宾浩斯遗忘曲线（Spaced Repetition Algorithm）**，全面覆盖国家电网 832 道核心题库（单选题 352 道、多选题 253 道、判断题 227 道）。
+基于 **Vue 3 + Tailwind CSS + Pinia + 云端多端同步** 构建的备考题库系统，采用经典**艾宾浩斯遗忘曲线（Spaced Repetition Algorithm）**，全面覆盖国家电网 832 道核心题库（单选题 352 道、多选题 253 道、判断题 227 道）。
 
 ---
 
@@ -19,10 +19,11 @@
   - **分类专题与题型专练**。
   - **错题攻坚本**。
   - **全真模拟考场**（随机抽取 100 题，60 分钟倒计时，交卷即时出分）。
-- 🔒 **用户注册权限与 IP 防破解机制**：
-  - **未注册用户**：数据仅保存在浏览器本地，严格禁止上传至云端；
-  - **用户注册**：需提供邮箱、密码以及系统授权码 **`ADBC`**，注册登录后自动同步全部学习进度到云端；
-  - **IP 黑名单**：输错授权码累计达到 5 次，系统将即刻拉黑该公网 IP，禁止其再进行注册。
+- 🔒 **用户注册认证、自动同步与 IP 防火墙**：
+  - **未注册用户**：数据保存在本地浏览器中，不占用云端资源；
+  - **用户注册与登录**：支持输入授权码 **`ADBC`** 注册，注册/登录后自动进入云端同步模式；
+  - **自动与手动同步**：支持每次做题后台实时自动同步，并提供右上角及设置页面一键手动全量同步；
+  - **IP 黑名单**：输错授权码累计达到 5 次，系统即刻拉黑该公网 IP，禁止其再进行注册。
 - ⌨️ **沉浸式交互**：
   - 键盘快捷键盲打（`A/B/C/D` 选选项，`Enter` 提交多选，`←/→` 切换题目）。
   - 答题卡抽屉实时跳转与查缺补漏。
@@ -49,20 +50,17 @@ npm run build
 
 本项目原生支持直接部署至 **Vercel**：
 
-1. 将代码推送到您的 GitHub / GitLab 仓库。
-2. 打开 [Vercel 控制台](https://vercel.com)，点击 **Add New...** -> **Project** 导入本仓库。
-3. 在 **Configure Project** 页面中的 **Environment Variables**（环境变量）处添加以下两个变量：
+1. 打开 [Vercel 控制台](https://vercel.com)，点击 **Add New...** -> **Project** 导入 `uwwp/aishua` 仓库。
+2. 在 **Configure Project** 页面中的 **Environment Variables**（环境变量）处添加以下两个变量：
    - `VITE_SUPABASE_URL`：`https://saigwpqwinueodihnvib.supabase.co`
    - `VITE_SUPABASE_ANON_KEY`：`sb_publishable_Ml61D5xU_pgC2DIjRhzERw_G5HiKac6`
-4. 点击 **Deploy**，大约 30 秒即可构建完成并获得全球 CDN 加速的线上访问链接！
-
-*(注：项目内已内置 `vercel.json`，配置了 SPA 路由重写规则，刷新页面不会出现 404)*
+3. 点击 **Deploy**，大约 30 秒即可构建完成并获得全球 CDN 加速的线上访问链接！
 
 ---
 
-## 🗄️ Supabase 数据库一键建表脚本
+## 🗄️ 数据库初始化配置脚本 (SQL)
 
-进入您的 [Supabase 控制台](https://supabase.com/dashboard) -> 选择项目 -> 点击左侧导航栏 **SQL Editor** -> 粘贴以下脚本并点击 **Run**：
+进入您的云端数据库控制台 -> 选择项目 -> 点击左侧导航栏 **SQL Editor** -> 粘贴以下脚本并点击 **Run**：
 
 ```sql
 -- 1. 创建用户题目学习进度表 (包含艾宾浩斯核心字段)
@@ -100,22 +98,22 @@ CREATE TABLE IF NOT EXISTS public.registration_ip_blacklist (
     last_attempt_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 4. 启用行级权限安全 (RLS)
+-- 4. 创建系统注册用户表 (支持免邮箱二次验证直连登录)
+CREATE TABLE IF NOT EXISTS public.app_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    last_login_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 5. 启用行级权限安全 (RLS)
 ALTER TABLE public.user_question_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quiz_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.registration_ip_blacklist ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
 
--- 5. 权限策略
-CREATE POLICY "Users manage own progress" 
-ON public.user_question_progress FOR ALL 
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users manage own logs" 
-ON public.quiz_logs FOR ALL 
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
-
+-- 6. 权限策略 (允许注册用户与客户端数据同步)
 CREATE POLICY "Allow public read blacklist" 
 ON public.registration_ip_blacklist FOR SELECT 
 TO anon, authenticated 
@@ -123,6 +121,24 @@ USING (true);
 
 CREATE POLICY "Allow public update blacklist" 
 ON public.registration_ip_blacklist FOR ALL 
+TO anon, authenticated 
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow user manage progress" 
+ON public.user_question_progress FOR ALL 
+TO anon, authenticated 
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow user manage logs" 
+ON public.quiz_logs FOR ALL 
+TO anon, authenticated 
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow app users auth" 
+ON public.app_users FOR ALL 
 TO anon, authenticated 
 USING (true)
 WITH CHECK (true);

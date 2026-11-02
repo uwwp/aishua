@@ -14,8 +14,8 @@
           <span>· 832 题艾宾浩斯抗遗忘记忆系统</span>
         </div>
         <div class="flex items-center gap-4 text-slate-500">
-          <span>Vue 3 + Vite</span>
-          <span>Supabase Free</span>
+          <span>Vue 3</span>
+          <span>云端多端同步</span>
           <span>Vercel Ready</span>
         </div>
       </div>
