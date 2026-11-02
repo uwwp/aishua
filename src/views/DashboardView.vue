@@ -1,57 +1,63 @@
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-    <!-- Top Welcome Banner -->
-    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white p-6 sm:p-8 shadow-xl">
-      <div class="relative z-10 max-w-3xl space-y-3">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-emerald-300 text-xs font-semibold">
-          <span>⚡ 智能题库 · 科学抗遗忘刷题引擎</span>
-          <span class="opacity-70">|</span>
-          <span class="text-white">{{ quizStore.currentBank.name }} ({{ quizStore.totalCount }}题)</span>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- Top Minimalist Welcome Banner -->
+    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-900 via-slate-900 to-slate-900 text-white p-6 sm:p-7 shadow-sm border border-emerald-900/30">
+      <div class="relative z-10 max-w-2xl space-y-2.5">
+        <!-- Minimal Tag -->
+        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-emerald-300 text-xs font-medium">
+          <span>📚 {{ quizStore.currentBank.name }}</span>
+          <span class="opacity-40">·</span>
+          <span>共 {{ quizStore.totalCount }} 题</span>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
-          科学记忆阶段排程，轻松攻克核心要点
+
+        <!-- Clean Headline -->
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">
+          智能排程，高效掌握
         </h1>
-        <p class="text-emerald-100/90 text-sm sm:text-base leading-relaxed">
-          智能计算最佳复习时机，在临界点精准巩固。支持单选题、多选题、判断题，科学抗遗忘。
+
+        <!-- Crisp one-line Subtitle -->
+        <p class="text-xs sm:text-sm text-emerald-100/75 leading-relaxed">
+          动态追踪记忆临界点，用更少的时间牢固掌握核心考点。
         </p>
 
-        <!-- CTA Action Buttons -->
-        <div class="pt-2 flex flex-wrap items-center gap-3">
+        <!-- Concise Action Buttons -->
+        <div class="pt-2 flex flex-wrap items-center gap-2.5">
           <router-link
             to="/practice?mode=ebbinghaus"
-            class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold text-sm shadow-lg shadow-emerald-500/30 transition-all flex items-center gap-2"
+            class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-medium text-xs shadow-sm transition-all flex items-center gap-1.5"
           >
-            <span>🧠 开启今日到期复习</span>
-            <span v-if="quizStore.dueTodayCount > 0" class="px-2 py-0.5 rounded-full bg-rose-600 text-[11px] font-bold">
-              {{ quizStore.dueTodayCount }} 题到期
+            <span>🧠 智能复习</span>
+            <span v-if="quizStore.dueTodayCount > 0" class="px-1.5 py-0.2 rounded-full bg-rose-600 text-[10px] font-bold">
+              {{ quizStore.dueTodayCount }}
             </span>
           </router-link>
 
           <router-link
             to="/practice?mode=new"
-            class="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md text-white font-semibold text-sm border border-white/20 transition-all flex items-center gap-2"
+            class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs border border-white/15 transition-all flex items-center gap-1.5"
           >
-            <span>🚀 学习新题 (余 {{ quizStore.unlearnedCount }} 题)</span>
+            <span>🚀 学习新题</span>
+            <span class="text-emerald-200/80 text-[11px]">(余 {{ quizStore.unlearnedCount }})</span>
           </router-link>
 
           <router-link
             to="/exam"
-            class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2"
+            class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-medium text-xs shadow-sm transition-all flex items-center gap-1.5"
           >
-            <span>📝 全真模拟考</span>
+            <span>📝 全真模考</span>
           </router-link>
         </div>
       </div>
 
-      <div class="absolute -right-12 -bottom-24 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+      <div class="absolute -right-8 -bottom-16 w-64 h-64 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none"></div>
     </div>
 
     <!-- 4 Key Stat Metric Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
       <!-- 1. 今日待复习 -->
       <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-500">今日到期待复习</span>
+          <span class="text-xs font-semibold text-slate-500">今日待复习</span>
           <span class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-sm">
             ⏰
           </span>
@@ -73,7 +79,7 @@
       <!-- 2. 已彻底掌握 (Stage 6) -->
       <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-500">彻底掌握 (Stage 6)</span>
+          <span class="text-xs font-semibold text-slate-500">彻底掌握</span>
           <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">
             🏆
           </span>
@@ -92,7 +98,7 @@
       <!-- 3. 正在记忆巩固中 -->
       <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-500">记忆巩固中 (Stage 1-5)</span>
+          <span class="text-xs font-semibold text-slate-500">记忆巩固中</span>
           <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
             📈
           </span>
@@ -111,7 +117,7 @@
       <!-- 4. 错题攻坚待消灭 -->
       <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-500">错题攻坚本</span>
+          <span class="text-xs font-semibold text-slate-500">错题本</span>
           <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">
             📕
           </span>
@@ -125,7 +131,7 @@
             to="/wrong-book" 
             class="text-xs font-medium text-amber-600 hover:text-amber-700 underline"
           >
-            错题攻坚 →
+            攻坚 →
           </router-link>
         </div>
       </div>
@@ -136,10 +142,10 @@
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
-            <span>🧠 记忆掌握阶段全景看板</span>
+            <span>🧠 记忆阶段全景</span>
           </h2>
           <p class="text-xs text-slate-500 mt-0.5">
-            题目随复习递增至更高阶段，答错则回退重温，直至进入 Stage 6 永久记忆
+            题目随复习递增至更高阶段，直至进入 Stage 6 永久记忆
           </p>
         </div>
         <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
@@ -218,86 +224,77 @@
             <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden flex">
               <div 
                 class="bg-emerald-500 h-full transition-all duration-500"
-                :style="{ width: `${cat.masterPercent}%` }"
-                title="已彻底掌握"
+                :title="`彻底掌握: ${cat.mastered} 题`"
+                :style="{ width: `${cat.total ? (cat.mastered / cat.total) * 100 : 0}%` }"
               ></div>
               <div 
-                class="bg-blue-400 h-full transition-all duration-500"
-                :style="{ width: `${cat.progressPercent - cat.masterPercent}%` }"
-                title="记忆巩固中"
+                class="bg-teal-300 h-full transition-all duration-500"
+                :title="`学习巩固中: ${cat.learned - cat.mastered} 题`"
+                :style="{ width: `${cat.total ? ((cat.learned - cat.mastered) / cat.total) * 100 : 0}%` }"
               ></div>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] text-slate-400 mt-1.5">
+              <div class="flex items-center gap-3">
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  彻底掌握: {{ cat.mastered }}
+                </span>
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-teal-300"></span>
+                  复习巩固中: {{ cat.learned - cat.mastered }}
+                </span>
+              </div>
+              <span>剩余未学: {{ cat.total - cat.learned }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 3 大题型分布卡片 (占1列) -->
-      <div class="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-5">
-        <div>
-          <h2 class="text-base sm:text-lg font-bold text-slate-800">
-            🎯 基础题型专攻
-          </h2>
-          <p class="text-xs text-slate-500 mt-1">
-            单选题稳基石、多选题攻重难、判断题扣细节
-          </p>
-        </div>
+      <!-- 题型分布矩阵 (占1列) -->
+      <div class="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xs space-y-5">
+        <h2 class="text-base sm:text-lg font-bold text-slate-800">
+          🎯 题型分布
+        </h2>
 
-        <div class="space-y-3.5">
+        <div class="space-y-4">
           <div 
-            v-for="item in quizStore.typeStats" 
-            :key="item.type"
-            class="p-3.5 rounded-xl border border-slate-100 bg-slate-50/40 space-y-2"
+            v-for="t in quizStore.typeStats" 
+            :key="t.type"
+            class="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2"
           >
-            <div class="flex items-center justify-between text-xs">
-              <div class="flex items-center gap-2">
-                <span 
-                  :class="[
-                    'w-2 h-2 rounded-full',
-                    item.type === '单选题' ? 'bg-blue-500' :
-                    item.type === '多选题' ? 'bg-purple-500' : 'bg-amber-500'
-                  ]"
-                ></span>
-                <span class="font-bold text-slate-800 text-sm">{{ item.type }}</span>
-                <span class="text-slate-400 font-mono">({{ item.total }} 题)</span>
-              </div>
-              <router-link
-                :to="`/practice?mode=type&target=${encodeURIComponent(item.type)}`"
-                class="text-xs text-emerald-600 hover:text-emerald-700 font-semibold"
-              >
-                专练 →
-              </router-link>
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-bold text-slate-700">{{ t.type }}</span>
+              <span class="text-xs font-semibold text-slate-500">{{ t.total }} 题</span>
             </div>
 
             <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
               <div 
-                class="h-full rounded-full transition-all duration-500"
-                :class="item.type === '单选题' ? 'bg-blue-500' : item.type === '多选题' ? 'bg-purple-500' : 'bg-amber-500'"
-                :style="{ width: `${item.percent}%` }"
+                class="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                :style="{ width: `${t.total ? (t.learned / t.total) * 100 : 0}%` }"
               ></div>
             </div>
-            <div class="flex justify-between text-[11px] text-slate-400">
-              <span>已掌握 {{ item.mastered }} 题</span>
-              <span>进度 {{ item.percent }}%</span>
+
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span>已学 {{ t.learned }} 题</span>
+              <span>掌握率 {{ t.total ? Math.round((t.mastered / t.total) * 100) : 0 }}%</span>
             </div>
           </div>
         </div>
 
-        <!-- 模拟考快速入口卡片 -->
-        <div class="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 text-amber-900 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-xs flex items-center gap-1.5">
-              <span>🏆</span> 全真模拟考场
-            </span>
-            <span class="text-[10px] font-semibold bg-amber-200/80 px-2 py-0.5 rounded">60 分钟</span>
+        <!-- 快速开始考试卡片 -->
+        <div class="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/70 text-amber-900 space-y-2 mt-6">
+          <div class="font-bold text-sm flex items-center gap-1.5">
+            <span>📝</span> 全真综合模拟考
           </div>
-          <p class="text-xs text-amber-800 leading-relaxed">
-            随机抽卷，全仿真考场限时答卷，交卷后即时生成诊断报告与错题清单。
+          <p class="text-xs text-amber-800/80 leading-relaxed">
+            按真实比例随机抽取题目，60分钟限时交卷与评分。
           </p>
           <router-link
             to="/exam"
-            class="block w-full text-center py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-xs shadow-xs transition-colors"
+            class="inline-block mt-1 w-full text-center py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs transition-colors"
           >
-            进入考场
+            开始模拟考 →
           </router-link>
         </div>
       </div>
