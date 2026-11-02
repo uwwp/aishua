@@ -42,7 +42,7 @@
       ></div>
     </div>
 
-    <!-- Empty State (if no questions match filter) -->
+    <!-- Empty State -->
     <div v-if="activeQuestions.length === 0" class="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-4">
       <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto">
         🎉
@@ -58,7 +58,7 @@
           返回主看板
         </router-link>
         <router-link to="/practice?mode=all" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">
-          浏览全题库 (832题)
+          浏览全题库 ({{ quizStore.totalCount }}题)
         </router-link>
       </div>
     </div>
@@ -125,7 +125,7 @@
         </div>
         <div>
           <h3 class="text-xl font-extrabold text-slate-800">本次学习圆满完成！</h3>
-          <p class="text-xs text-slate-500 mt-1">艾宾浩斯抗遗忘记忆曲线已成功更新</p>
+          <p class="text-xs text-slate-500 mt-1">记忆排程与进度已成功更新</p>
         </div>
 
         <div class="grid grid-cols-3 gap-3 py-2 bg-slate-50 rounded-2xl p-4">
@@ -174,18 +174,15 @@ const quizStore = useQuizStore()
 const currentIndex = ref(0)
 const isDrawerOpen = ref(false)
 const showFinishModal = ref(false)
-const sessionRecords = ref({}) // { [qId]: { userAnswer, isCorrect } }
+const sessionRecords = ref({})
 
-// Calculate questions based on query mode
 const activeQuestions = computed(() => {
   const mode = route.query.mode || 'ebbinghaus'
   const target = route.query.target
 
   if (mode === 'ebbinghaus') {
-    // 艾宾浩斯复习模式：到期的题目
     return quizStore.dueTodayQuestions
   } else if (mode === 'new') {
-    // 新题模式：尚未学习过的题目
     return quizStore.newQuestions
   } else if (mode === 'category') {
     return quizStore.questions.filter(q => q.category === target)
@@ -196,7 +193,6 @@ const activeQuestions = computed(() => {
   } else if (mode === 'favorite') {
     return quizStore.favoriteQuestions
   } else {
-    // all
     return quizStore.questions
   }
 })
@@ -208,19 +204,19 @@ const currentQuestion = computed(() => {
 const modeTitle = computed(() => {
   const mode = route.query.mode || 'ebbinghaus'
   const target = route.query.target
-  if (mode === 'ebbinghaus') return '🧠 艾宾浩斯到期复习'
+  if (mode === 'ebbinghaus') return '🧠 今日到期复习'
   if (mode === 'new') return '🚀 新题突击'
   if (mode === 'category') return `📑 专题: ${target}`
   if (mode === 'type') return `🎯 题型: ${target}`
   if (mode === 'wrong') return '📕 错题攻坚强化'
   if (mode === 'favorite') return '⭐ 重点收藏'
-  return '📚 全题库顺序刷题'
+  return '📚 题库全量刷题'
 })
 
 const emptyMessageTitle = computed(() => {
   const mode = route.query.mode || 'ebbinghaus'
-  if (mode === 'ebbinghaus') return '今日艾宾浩斯复习任务已全部达标！'
-  if (mode === 'new') return '恭喜！您已经学完了所有 832 道新题！'
+  if (mode === 'ebbinghaus') return '今日复习任务已全部达标！'
+  if (mode === 'new') return '恭喜！您已经学完了当前题库的所有新题！'
   if (mode === 'wrong') return '太棒了！错题本目前为空，没有积压错题。'
   if (mode === 'favorite') return '暂无收藏题目，可在做题时点击右上角【☆ 收藏】。'
   return '未找到符合条件的题目'
@@ -229,7 +225,7 @@ const emptyMessageTitle = computed(() => {
 const emptyMessageDesc = computed(() => {
   const mode = route.query.mode || 'ebbinghaus'
   if (mode === 'ebbinghaus') {
-    return '今日暂无需要复习的到期题目。系统将根据遗忘曲线在明日安排下一批强化复习。您可以继续学习新题或去模拟考！'
+    return '今日暂无需要复习的到期题目。系统将根据记忆曲线在明日安排下一批强化复习。您可以继续学习新题或去模拟考！'
   }
   return '您可以切换其它模式继续备战。'
 })

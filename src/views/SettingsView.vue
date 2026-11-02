@@ -17,7 +17,7 @@
           </div>
           <div>
             <h2 class="text-base font-bold text-slate-800">云端多端同步中心</h2>
-            <p class="text-xs text-slate-500">支持手机、电脑、平板跨设备无缝同步 832 题学习进度与错题本</p>
+            <p class="text-xs text-slate-500">支持手机、电脑、平板跨设备无缝同步当前题库学习进度与错题本</p>
           </div>
         </div>
 
@@ -81,7 +81,7 @@
               </label>
             </div>
             <p class="text-xs text-slate-500 mt-2 leading-relaxed">
-              开启后，每答完一道题、艾宾浩斯复习或标记错题时，系统将在后台自动静默推送至云端。
+              开启后，每答完一道题、排程复习或标记错题时，系统将在后台自动静默推送至云端。
             </p>
           </div>
           <div class="text-[11px] font-semibold" :class="authStore.isAutoSync ? 'text-emerald-600' : 'text-slate-400'">
@@ -97,7 +97,7 @@
                 <span>🔄</span> 手动全量同步
               </span>
               <span class="text-[10px] bg-slate-200/80 px-2 py-0.5 rounded text-slate-600 font-mono">
-                832 题完整比对
+                当前题库数据比对
               </span>
             </div>
             <p class="text-xs text-slate-500 mt-2 leading-relaxed">
@@ -160,8 +160,8 @@
       <!-- Danger Zone -->
       <div class="pt-6 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <div class="text-xs font-bold text-rose-600">重置所有进度</div>
-          <div class="text-[11px] text-slate-400">将清除本地已做题目的艾宾浩斯阶段、错题记录和打卡历史</div>
+          <div class="text-xs font-bold text-rose-600">重置当前题库进度</div>
+          <div class="text-[11px] text-slate-400">将清除本地已做题目的记忆阶段、错题记录和打卡历史</div>
         </div>
         <button
           @click="handleReset"
@@ -221,6 +221,8 @@ async function handleSignOut() {
 
 function exportData() {
   const data = {
+    bankId: quizStore.activeBankId,
+    bankName: quizStore.currentBank?.name,
     progress: quizStore.progressMap,
     dailyLogs: quizStore.dailyLogs,
     exportedAt: new Date().toISOString()
@@ -229,7 +231,7 @@ function exportData() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `dianwang_ebbinghaus_backup_${new Date().toISOString().split('T')[0]}.json`
+  a.download = `aishua_backup_${quizStore.activeBankId}_${new Date().toISOString().split('T')[0]}.json`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -244,8 +246,7 @@ function importData(e) {
       if (data.progress) {
         quizStore.progressMap = data.progress
         if (data.dailyLogs) quizStore.dailyLogs = data.dailyLogs
-        localStorage.setItem('dianwang_ebbinghaus_progress_v2', JSON.stringify(data.progress))
-        if (data.dailyLogs) localStorage.setItem('dianwang_study_logs_v2', JSON.stringify(data.dailyLogs))
+        quizStore.saveProgress()
         alert('进度恢复成功！')
       } else {
         alert('文件格式不正确，缺少 progress 字段')
@@ -258,7 +259,7 @@ function importData(e) {
 }
 
 function handleReset() {
-  if (confirm('确定要清空所有刷题记录吗？此操作无法恢复！')) {
+  if (confirm('确定要清空当前题库的刷题记录吗？此操作无法恢复！')) {
     if (confirm('请再次确认：清空后将从第 1 题开始重新排程。')) {
       quizStore.resetAllProgress()
       alert('已重置所有学习数据。')

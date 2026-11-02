@@ -4,7 +4,7 @@
       'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border shadow-xs transition-colors',
       stageInfo.color
     ]"
-    :title="`艾宾浩斯阶段 ${stage}：${stageInfo.desc}，留存率约 ${stageInfo.retention}%`"
+    :title="`记忆阶段 ${stage}：${stageInfo.desc}，留存率约 ${stageInfo.retention}%`"
   >
     <span class="w-1.5 h-1.5 rounded-full" :class="dotColor"></span>
     <span>Stage {{ stage }}: {{ stageInfo.label }}</span>

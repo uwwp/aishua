@@ -11,11 +11,12 @@
       <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div class="flex items-center gap-2">
           <span class="font-bold text-slate-700">⚡ 艾刷 aishua</span>
-          <span>· 832 题艾宾浩斯抗遗忘精熟系统</span>
+          <span>· 现代智能刷题与抗遗忘精熟系统</span>
         </div>
         <div class="flex items-center gap-4 text-slate-500">
           <span>Vue 3</span>
           <span>云端多端同步</span>
+          <span>多题库支持</span>
           <span>Vercel Ready</span>
         </div>
       </div>

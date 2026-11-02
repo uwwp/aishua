@@ -7,10 +7,10 @@
       </div>
       <div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800">
-          国家电网核心知识 · 全真模拟考试
+          全真模拟考试 · 综合水平自测
         </h1>
         <p class="text-slate-500 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
-          全仿真机考环境，随机抽取 100 道核心题目，倒计时 60 分钟。全面检验综合应试水平与记忆熟练度。
+          全真机考模拟环境，基于当前题库（{{ quizStore.currentBank.name }}）自动抽题组卷，限时倒计时，即时出分与错题诊断。
         </p>
       </div>
 
@@ -18,20 +18,20 @@
       <div class="max-w-md mx-auto bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left text-xs space-y-3 text-slate-600">
         <div class="font-bold text-slate-800 text-sm">📋 考卷结构与规则：</div>
         <div class="flex justify-between py-1 border-b border-slate-200/60">
-          <span>单选题 (50 题)</span>
-          <span class="font-semibold text-slate-800">50 分 (每题 1 分)</span>
+          <span>单选题 (每题 1 分)</span>
+          <span class="font-semibold text-slate-800">{{ singleMaxCount }} 题</span>
         </div>
         <div class="flex justify-between py-1 border-b border-slate-200/60">
-          <span>多选题 (30 题)</span>
-          <span class="font-semibold text-slate-800">60 分 (每题 2 分，多选/少选/错选均不得分)</span>
+          <span>多选题 (每题 2 分，多/漏/错选均不得分)</span>
+          <span class="font-semibold text-slate-800">{{ multiMaxCount }} 题</span>
         </div>
         <div class="flex justify-between py-1 border-b border-slate-200/60">
-          <span>判断题 (20 题)</span>
-          <span class="font-semibold text-slate-800">20 分 (每题 1 分)</span>
+          <span>判断题 (每题 1 分)</span>
+          <span class="font-semibold text-slate-800">{{ judgeMaxCount }} 题</span>
         </div>
         <div class="flex justify-between font-bold text-slate-800 pt-1">
           <span>满分 / 及格线</span>
-          <span>130 分 / 78 分及格 (60%)</span>
+          <span>{{ maxPossibleScore }} 分 / {{ Math.round(maxPossibleScore * 0.6) }} 分及格 (60%)</span>
         </div>
       </div>
 
@@ -40,7 +40,7 @@
           @click="startExam"
           class="px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base shadow-lg shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95"
         >
-          开始全真模拟考 (60分钟) →
+          开始模拟考 (共 {{ singleMaxCount + multiMaxCount + judgeMaxCount }} 题) →
         </button>
       </div>
     </div>
@@ -136,22 +136,22 @@
     <div v-else class="space-y-6">
       <div class="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-sm text-center space-y-6">
         <div class="w-20 h-20 rounded-full flex items-center justify-center text-4xl mx-auto shadow-md"
-          :class="totalScore >= 78 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'"
+          :class="totalScore >= passScore ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'"
         >
-          {{ totalScore >= 78 ? '🏆' : '📚' }}
+          {{ totalScore >= passScore ? '🏆' : '📚' }}
         </div>
 
         <div>
           <span 
             :class="[
               'px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider',
-              totalScore >= 78 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+              totalScore >= passScore ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
             ]"
           >
-            {{ totalScore >= 78 ? '考试通过 · 恭喜通关' : '未及格 · 仍需巩固' }}
+            {{ totalScore >= passScore ? '自测通过 · 表现优异' : '尚未及格 · 仍需强化' }}
           </span>
           <div class="text-5xl font-black text-slate-800 mt-3 font-mono">
-            {{ totalScore }} <span class="text-lg font-normal text-slate-400">/ 130 分</span>
+            {{ totalScore }} <span class="text-lg font-normal text-slate-400">/ {{ maxPossibleScore }} 分</span>
           </div>
           <p class="text-xs text-slate-500 mt-2">
             答对 {{ correctCount }} 题 · 答错 {{ wrongCount }} 题 · 未作答 {{ unAnsweredCount }} 题 · 耗时 {{ timeSpentText }}
@@ -162,18 +162,18 @@
         <div class="grid grid-cols-3 gap-3 max-w-lg mx-auto">
           <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
             <div class="text-xs text-slate-400 font-medium">单选题得分</div>
-            <div class="text-xl font-bold text-slate-800 mt-1">{{ singleScore }} / 50</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ singleCorrect }}/50 题</div>
+            <div class="text-xl font-bold text-slate-800 mt-1">{{ singleScore }} / {{ singleMaxCount * 1 }}</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ singleCorrect }}/{{ singleMaxCount }} 题</div>
           </div>
           <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
             <div class="text-xs text-slate-400 font-medium">多选题得分</div>
-            <div class="text-xl font-bold text-slate-800 mt-1">{{ multiScore }} / 60</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ multiCorrect }}/30 题</div>
+            <div class="text-xl font-bold text-slate-800 mt-1">{{ multiScore }} / {{ multiMaxCount * 2 }}</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ multiCorrect }}/{{ multiMaxCount }} 题</div>
           </div>
           <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
             <div class="text-xs text-slate-400 font-medium">判断题得分</div>
-            <div class="text-xl font-bold text-slate-800 mt-1">{{ judgeScore }} / 20</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ judgeCorrect }}/20 题</div>
+            <div class="text-xl font-bold text-slate-800 mt-1">{{ judgeScore }} / {{ judgeMaxCount * 1 }}</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ judgeCorrect }}/{{ judgeMaxCount }} 题</div>
           </div>
         </div>
 
@@ -227,8 +227,8 @@ const currentIndex = ref(0)
 const isDrawerOpen = ref(false)
 
 const examQuestions = ref([])
-const examAnswers = ref({}) // { [qId]: { userAnswer, isCorrect } }
-const remainingSeconds = ref(3600) // 60 min
+const examAnswers = ref({})
+const remainingSeconds = ref(3600)
 let timer = null
 
 function shuffle(array) {
@@ -240,11 +240,31 @@ function shuffle(array) {
   return arr
 }
 
+const singleMaxCount = computed(() => {
+  const count = quizStore.questions.filter(q => q.type === '单选题').length
+  return Math.min(50, count)
+})
+
+const multiMaxCount = computed(() => {
+  const count = quizStore.questions.filter(q => q.type === '多选题').length
+  return Math.min(30, count)
+})
+
+const judgeMaxCount = computed(() => {
+  const count = quizStore.questions.filter(q => q.type === '判断题').length
+  return Math.min(20, count)
+})
+
+const maxPossibleScore = computed(() => {
+  return (singleMaxCount.value * 1) + (multiMaxCount.value * 2) + (judgeMaxCount.value * 1)
+})
+
+const passScore = computed(() => Math.round(maxPossibleScore.value * 0.6))
+
 function startExam() {
-  // 抽 50 单选、30 多选、20 判断
-  const singles = shuffle(quizStore.questions.filter(q => q.type === '单选题')).slice(0, 50)
-  const multis = shuffle(quizStore.questions.filter(q => q.type === '多选题')).slice(0, 30)
-  const judges = shuffle(quizStore.questions.filter(q => q.type === '判断题')).slice(0, 20)
+  const singles = shuffle(quizStore.questions.filter(q => q.type === '单选题')).slice(0, singleMaxCount.value)
+  const multis = shuffle(quizStore.questions.filter(q => q.type === '多选题')).slice(0, multiMaxCount.value)
+  const judges = shuffle(quizStore.questions.filter(q => q.type === '判断题')).slice(0, judgeMaxCount.value)
 
   examQuestions.value = [...singles, ...multis, ...judges]
   examAnswers.value = {}
@@ -290,7 +310,6 @@ const unAnsweredCount = computed(() => {
 
 function handleExamAnswer({ questionId, userAnswer, isCorrect }) {
   examAnswers.value[questionId] = { userAnswer, isCorrect }
-  // Update Ebbinghaus memory & record
   quizStore.recordAnswer({
     questionId,
     userAnswer,
@@ -321,7 +340,7 @@ function submitExam() {
   if (timer) clearInterval(timer)
   isSubmitted.value = true
 
-  if (totalScore.value >= 78) {
+  if (totalScore.value >= passScore.value) {
     confetti({
       particleCount: 100,
       spread: 70,
@@ -330,7 +349,6 @@ function submitExam() {
   }
 }
 
-// Score Computations
 const singleCorrect = computed(() => {
   return examQuestions.value
     .filter(q => q.type === '单选题')
@@ -349,9 +367,9 @@ const judgeCorrect = computed(() => {
     .filter(q => examAnswers.value[q.id]?.isCorrect).length
 })
 
-const singleScore = computed(() => singleCorrect.value * 1) // 1 point each
-const multiScore = computed(() => multiCorrect.value * 2) // 2 points each
-const judgeScore = computed(() => judgeCorrect.value * 1) // 1 point each
+const singleScore = computed(() => singleCorrect.value * 1)
+const multiScore = computed(() => multiCorrect.value * 2)
+const judgeScore = computed(() => judgeCorrect.value * 1)
 const totalScore = computed(() => singleScore.value + multiScore.value + judgeScore.value)
 
 const correctCount = computed(() => singleCorrect.value + multiCorrect.value + judgeCorrect.value)

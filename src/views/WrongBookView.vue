@@ -10,7 +10,7 @@
           <div>
             <h1 class="text-xl sm:text-2xl font-bold text-slate-800">错题攻坚本</h1>
             <p class="text-xs text-slate-500 mt-0.5">
-              记录所有历史上答错的题目，按照艾宾浩斯抗遗忘规律强化突破
+              记录所有历史上答错的题目，按照科学记忆强化规律各个击破
             </p>
           </div>
         </div>
@@ -60,7 +60,7 @@
           selectedCategory === cat ? 'bg-amber-600 text-white border-amber-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
         ]"
       >
-        {{ cat.replace(/^第[一二三四五]部分/, '') }} ({{ getCatCount(cat) }})
+        {{ cat.replace(/^第[一二三四五六七八九十]+部分/, '') }} ({{ getCatCount(cat) }})
       </button>
     </div>
 
@@ -73,11 +73,11 @@
         太棒了！当前分类下暂无错题积压
       </h3>
       <p class="text-xs text-slate-500">
-        继续保持良好的做题习惯，艾宾浩斯曲线将协助您牢记知识点。
+        继续保持良好的做题习惯，科学记忆排程将协助您牢记每一个关键考点。
       </p>
       <div class="pt-2">
         <router-link to="/practice?mode=ebbinghaus" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">
-          前往艾宾浩斯复习
+          前往智能复习
         </router-link>
       </div>
     </div>
@@ -153,7 +153,7 @@
             正确答案: <strong class="text-emerald-700">{{ q.answer_str || q.answer }}</strong>
           </span>
           <span class="text-[11px] text-slate-400">
-            艾宾浩斯状态: Stage {{ quizStore.progressMap[q.id]?.stage ?? 0 }}
+            记忆阶段: Stage {{ quizStore.progressMap[q.id]?.stage ?? 0 }}
           </span>
         </div>
       </div>
@@ -168,13 +168,13 @@ import { useQuizStore } from '../stores/quizStore'
 const quizStore = useQuizStore()
 const selectedCategory = ref('all')
 
-const categories = [
-  '第一部分形势政策',
-  '第二部分企业文化',
-  '第三部分公司战略',
-  '第四部分新型电力系统',
-  '第五部分品牌建设'
-]
+const categories = computed(() => {
+  const set = new Set()
+  quizStore.wrongQuestions.forEach(q => {
+    if (q.category) set.add(q.category)
+  })
+  return Array.from(set)
+})
 
 const filteredWrongQuestions = computed(() => {
   if (selectedCategory.value === 'all') {

@@ -20,7 +20,7 @@
           {{ question.category }}
         </span>
 
-        <!-- Ebbinghaus Memory Badge -->
+        <!-- Memory Stage Badge -->
         <StageBadge 
           :stage="currentProgress?.stage ?? 0" 
           :nextReviewAt="currentProgress?.next_review_at" 
@@ -128,21 +128,21 @@
           </div>
         </div>
 
-        <!-- Ebbinghaus Adaptive Memory Feedback -->
+        <!-- Adaptive Memory Feedback -->
         <div class="text-xs leading-relaxed" :class="answerResult.isCorrect ? 'text-emerald-700' : 'text-rose-700'">
           <div v-if="answerResult.isCorrect" class="space-y-1">
             <p>
-              🌟 艾宾浩斯阶段晋升：
+              🌟 记忆阶段晋升：
               <strong>Stage {{ (currentProgress?.stage ?? 1) - 1 }}</strong> ➔ 
               <strong>Stage {{ currentProgress?.stage }}</strong>
             </p>
             <p class="text-emerald-600">
-              根据遗忘曲线，本次记忆加深，下次复习已智能排程于：<strong>{{ nextReviewText }}</strong>
+              记忆深度加深，下次复习已智能排程于：<strong>{{ nextReviewText }}</strong>
             </p>
           </div>
           <div v-else class="space-y-1">
             <p>
-              ⚠️ 艾宾浩斯抗遗忘重置：该题已自动收录入<strong>【错题攻坚本】</strong>，记忆阶段重置为 <strong>Stage 0</strong>。
+              ⚠️ 记忆强化重置：该题已自动收录入<strong>【错题攻坚本】</strong>，记忆阶段重置为 <strong>Stage 0</strong>。
             </p>
             <p class="text-rose-600">
               系统将在<strong>今天稍后或次日</strong>再次优先为您安排强化复习。
@@ -184,13 +184,11 @@ const props = defineProps({
 
 const emit = defineEmits(['answer', 'toggle-favorite'])
 
-// User selections
-const selectedOptions = ref([]) // For multi-choice
-const singleSelected = ref(null) // For single/judge
+const selectedOptions = ref([])
+const singleSelected = ref(null)
 const hasAnswered = ref(false)
 const answerResult = ref({ isCorrect: false })
 
-// Initialize or reset state when question changes
 watch(
   () => props.question.id,
   () => {
@@ -199,7 +197,6 @@ watch(
   { immediate: true }
 )
 
-// Also watch savedRecord (for restoring answered questions in exam/drawer)
 watch(
   () => props.savedRecord,
   (rec) => {
@@ -244,7 +241,6 @@ function selectOption(key) {
       selectedOptions.value.sort()
     }
   } else {
-    // 单选题 or 判断题
     if (hasAnswered.value) return
     singleSelected.value = key
     evaluateAnswer(key)
@@ -303,7 +299,6 @@ function getOptionStyle(key) {
     return 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/20 text-slate-700'
   }
 
-  // Answered state (Practice mode)
   if (!props.isExamMode) {
     if (correct && selected) {
       return 'border-emerald-500 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500/20 font-medium'
@@ -316,7 +311,6 @@ function getOptionStyle(key) {
     }
     return 'border-slate-200 bg-slate-50 text-slate-400 opacity-60'
   } else {
-    // Exam mode (don't reveal answers until submitted)
     if (selected) {
       return 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500/20 text-emerald-900 font-medium'
     }
@@ -355,9 +349,7 @@ const nextReviewText = computed(() => {
   return formatReviewTimeRemaining(props.currentProgress?.next_review_at)
 })
 
-// Keyboard shortcuts: A, B, C, D
 function handleKeyDown(e) {
-  // Avoid interfering with inputs/textareas
   if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return
 
   const key = e.key.toUpperCase()

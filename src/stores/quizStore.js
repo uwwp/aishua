@@ -1,30 +1,149 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import allQuestionsRaw from '../data/all_questions.json'
+import defaultQuestionsRaw from '../data/all_questions.json'
 import { calculateNextReview, isQuestionDue } from '../services/ebbinghaus'
 import { getSupabaseClient } from '../services/supabase'
 import { useAuthStore } from './authStore'
 
 const STORAGE_KEY_PROGRESS = 'dianwang_ebbinghaus_progress_v2'
 const STORAGE_KEY_STUDY_LOGS = 'dianwang_study_logs_v2'
+const STORAGE_KEY_CUSTOM_BANKS = 'aishua_custom_banks_v1'
+const STORAGE_KEY_ACTIVE_BANK = 'aishua_active_bank_id'
+
+const BUILTIN_BANK_ID = 'default_bank'
 
 export const useQuizStore = defineStore('quiz', () => {
-  // 1. 全部静态题目数据
-  const questions = ref(allQuestionsRaw)
+  // 1. 默认内置题库
+  const defaultBank = {
+    id: BUILTIN_BANK_ID,
+    name: '国家电网核心精选题库',
+    description: '包含形势政策、企业文化、公司战略、新型电力系统、品牌建设五大模块',
+    questions: defaultQuestionsRaw,
+    isBuiltIn: true
+  }
 
-  // 2. 题目进度字典: { [questionId]: { ...progress } }
+  // 2. 自定义题库列表 (从 LocalStorage 读取)
+  const customBanks = ref([])
+  try {
+    const savedBanks = localStorage.getItem(STORAGE_KEY_CUSTOM_BANKS)
+    if (savedBanks) {
+      customBanks.value = JSON.parse(savedBanks)
+    }
+  } catch (e) {
+    console.warn('Failed to parse custom banks', e)
+  }
+
+  // 当前选中题库 ID
+  const activeBankId = ref(localStorage.getItem(STORAGE_KEY_ACTIVE_BANK) || BUILTIN_BANK_ID)
+
+  // 当前可用的所有题库列表
+  const allBanks = computed(() => {
+    return [
+      {
+        id: defaultBank.id,
+        name: defaultBank.name,
+        description: defaultBank.description,
+        count: defaultBank.questions.length,
+        isBuiltIn: true
+      },
+      ...customBanks.value.map(b => ({
+        id: b.id,
+        name: b.name,
+        description: b.description || '用户自定义导入题库',
+        count: b.questions?.length || 0,
+        isBuiltIn: false
+      }))
+    ]
+  })
+
+  // 当前激活的题库对象
+  const currentBank = computed(() => {
+    if (activeBankId.value === BUILTIN_BANK_ID) {
+      return defaultBank
+    }
+    const found = customBanks.value.find(b => b.id === activeBankId.value)
+    return found || defaultBank
+  })
+
+  // 当前激活题库的全部题目
+  const questions = computed(() => {
+    return currentBank.value.questions || []
+  })
+
+  // 切换题库
+  function switchBank(bankId) {
+    activeBankId.value = bankId
+    localStorage.setItem(STORAGE_KEY_ACTIVE_BANK, bankId)
+    loadLocalProgress()
+  }
+
+  // 导入新的自定义题库
+  function importCustomBank({ name, description = '', questionsList = [] }) {
+    if (!questionsList.length) {
+      throw new Error('导入的题目数量不能为空！')
+    }
+
+    // 格式化与规范化题目
+    const normalized = questionsList.map((item, idx) => {
+      const qType = item.type || (item.options?.C ? (Array.isArray(item.answer) ? '多选题' : '单选题') : '判断题')
+      return {
+        id: item.id || (idx + 1),
+        type: qType,
+        category: item.category || '综合练习',
+        question: item.question || item.title || '',
+        options: item.options || { A: item.optionA, B: item.optionB, C: item.optionC, D: item.optionD },
+        answer: item.answer || 'A',
+        answer_str: Array.isArray(item.answer) ? item.answer.join('、') : (item.answer || 'A')
+      }
+    })
+
+    const newBank = {
+      id: 'bank_' + Date.now(),
+      name: name || `自定义题库 (${new Date().toLocaleDateString()})`,
+      description,
+      questions: normalized,
+      createdAt: new Date().toISOString()
+    }
+
+    customBanks.value.push(newBank)
+    localStorage.setItem(STORAGE_KEY_CUSTOM_BANKS, JSON.stringify(customBanks.value))
+    
+    // 自动切换为新导入的题库
+    switchBank(newBank.id)
+    return newBank
+  }
+
+  // 删除自定义题库
+  function deleteCustomBank(bankId) {
+    if (bankId === BUILTIN_BANK_ID) {
+      throw new Error('内置基础题库不支持删除')
+    }
+    customBanks.value = customBanks.value.filter(b => b.id !== bankId)
+    localStorage.setItem(STORAGE_KEY_CUSTOM_BANKS, JSON.stringify(customBanks.value))
+    if (activeBankId.value === bankId) {
+      switchBank(BUILTIN_BANK_ID)
+    }
+  }
+
+  // 题目进度字典: { [questionId]: { ...progress } }
   const progressMap = ref({})
-
-  // 3. 每日打卡历史: { 'YYYY-MM-DD': { total: 0, correct: 0 } }
   const dailyLogs = ref({})
+
+  function getStorageKeyForProgress() {
+    return `${STORAGE_KEY_PROGRESS}_${activeBankId.value}`
+  }
 
   // 初始化加载本地进度
   function loadLocalProgress() {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_PROGRESS)
+      const key = getStorageKeyForProgress()
+      const saved = localStorage.getItem(key) || (activeBankId.value === BUILTIN_BANK_ID ? localStorage.getItem(STORAGE_KEY_PROGRESS) : null)
       if (saved) {
         progressMap.value = JSON.parse(saved)
+      } else {
+        progressMap.value = {}
       }
+
       const savedLogs = localStorage.getItem(STORAGE_KEY_STUDY_LOGS)
       if (savedLogs) {
         dailyLogs.value = JSON.parse(savedLogs)
@@ -37,7 +156,11 @@ export const useQuizStore = defineStore('quiz', () => {
   // 保存到本地 LocalStorage
   function saveLocalProgress() {
     try {
-      localStorage.setItem(STORAGE_KEY_PROGRESS, JSON.stringify(progressMap.value))
+      const key = getStorageKeyForProgress()
+      localStorage.setItem(key, JSON.stringify(progressMap.value))
+      if (activeBankId.value === BUILTIN_BANK_ID) {
+        localStorage.setItem(STORAGE_KEY_PROGRESS, JSON.stringify(progressMap.value))
+      }
       localStorage.setItem(STORAGE_KEY_STUDY_LOGS, JSON.stringify(dailyLogs.value))
     } catch (e) {
       console.error('LocalStorage write failed:', e)
@@ -134,7 +257,7 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
-  // 手动全量同步 (拉取云端合并后推送到云端)
+  // 手动全量同步
   async function performManualSync() {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) {
@@ -172,7 +295,7 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
-  // 记录答题并触发艾宾浩斯更新
+  // 记录答题并触发记忆阶段更新
   function recordAnswer({ questionId, userAnswer, isCorrect, mode = 'practice' }) {
     const current = progressMap.value[questionId] || {
       question_id: questionId,
@@ -200,7 +323,6 @@ export const useQuizStore = defineStore('quiz', () => {
 
     progressMap.value[questionId] = updated
 
-    // 记录今日学习历史
     const today = new Date().toISOString().split('T')[0]
     if (!dailyLogs.value[today]) {
       dailyLogs.value[today] = { total: 0, correct: 0 }
@@ -214,7 +336,6 @@ export const useQuizStore = defineStore('quiz', () => {
     return updated
   }
 
-  // 切换收藏状态
   function toggleFavorite(questionId) {
     const current = progressMap.value[questionId] || {
       question_id: questionId,
@@ -233,7 +354,6 @@ export const useQuizStore = defineStore('quiz', () => {
     return current.is_favorite
   }
 
-  // 移出错题本
   function removeFromWrongBook(questionId) {
     if (progressMap.value[questionId]) {
       progressMap.value[questionId].in_wrong_book = false
@@ -242,7 +362,6 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
-  // 清空全部错题本
   function clearWrongBook() {
     Object.keys(progressMap.value).forEach(qId => {
       if (progressMap.value[qId]) {
@@ -252,23 +371,25 @@ export const useQuizStore = defineStore('quiz', () => {
     saveLocalProgress()
   }
 
-  // 重置全部学习进度
   function resetAllProgress() {
     progressMap.value = {}
     dailyLogs.value = {}
-    localStorage.removeItem(STORAGE_KEY_PROGRESS)
+    localStorage.removeItem(getStorageKeyForProgress())
+    if (activeBankId.value === BUILTIN_BANK_ID) {
+      localStorage.removeItem(STORAGE_KEY_PROGRESS)
+    }
     localStorage.removeItem(STORAGE_KEY_STUDY_LOGS)
   }
 
   // --- 统计指标 Getters ---
 
-  const totalCount = computed(() => questions.value.length) // 832
+  const totalCount = computed(() => questions.value.length)
 
   const learnedCount = computed(() => {
     return Object.values(progressMap.value).filter(p => (p.review_count || 0) > 0).length
   })
 
-  const unlearnedCount = computed(() => totalCount.value - learnedCount.value)
+  const unlearnedCount = computed(() => Math.max(0, totalCount.value - learnedCount.value))
 
   const masteredCount = computed(() => {
     return Object.values(progressMap.value).filter(p => p.stage === 6).length
@@ -324,34 +445,36 @@ export const useQuizStore = defineStore('quiz', () => {
     return dist
   })
 
+  // 动态提取所属分类统计
   const categoryStats = computed(() => {
-    const parts = [
-      '第一部分形势政策',
-      '第二部分企业文化',
-      '第三部分公司战略',
-      '第四部分新型电力系统',
-      '第五部分品牌建设'
-    ]
+    const catMap = {}
+    questions.value.forEach(q => {
+      const cat = q.category || '综合分类'
+      if (!catMap[cat]) {
+        catMap[cat] = []
+      }
+      catMap[cat].push(q)
+    })
 
-    return parts.map(partName => {
-      const partQuestions = questions.value.filter(q => q.category === partName)
-      const total = partQuestions.length
-      const learned = partQuestions.filter(q => {
+    return Object.keys(catMap).map(catName => {
+      const catQuestions = catMap[catName]
+      const total = catQuestions.length
+      const learned = catQuestions.filter(q => {
         const p = progressMap.value[q.id]
         return p && (p.review_count || 0) > 0
       }).length
-      const mastered = partQuestions.filter(q => {
+      const mastered = catQuestions.filter(q => {
         const p = progressMap.value[q.id]
         return p && p.stage === 6
       }).length
-      const wrong = partQuestions.filter(q => {
+      const wrong = catQuestions.filter(q => {
         const p = progressMap.value[q.id]
         return p && p.in_wrong_book
       }).length
 
       return {
-        name: partName.replace(/^第[一二三四五]部分/, ''),
-        fullName: partName,
+        name: catName.replace(/^第[一二三四五六七八九十]+部分/, ''),
+        fullName: catName,
         total,
         learned,
         mastered,
@@ -362,6 +485,7 @@ export const useQuizStore = defineStore('quiz', () => {
     })
   })
 
+  // 动态提取题型统计
   const typeStats = computed(() => {
     const types = ['单选题', '多选题', '判断题']
     return types.map(typeName => {
@@ -425,6 +549,9 @@ export const useQuizStore = defineStore('quiz', () => {
 
   return {
     questions,
+    allBanks,
+    currentBank,
+    activeBankId,
     progressMap,
     dailyLogs,
     totalCount,
@@ -442,6 +569,9 @@ export const useQuizStore = defineStore('quiz', () => {
     typeStats,
     streakDays,
     todayAnsweredCount,
+    switchBank,
+    importCustomBank,
+    deleteCustomBank,
     recordAnswer,
     toggleFavorite,
     removeFromWrongBook,

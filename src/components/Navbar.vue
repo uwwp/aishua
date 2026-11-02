@@ -2,21 +2,41 @@
   <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
-        <!-- Left: Brand Logo -->
-        <router-link to="/" class="flex items-center gap-3 group">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-700/20 group-hover:scale-105 transition-transform">
-            <span class="text-xl">⚡</span>
-          </div>
-          <div>
-            <div class="font-bold text-slate-800 text-base leading-tight flex items-center gap-1.5">
-              <span>艾刷</span>
-              <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono">
-                aishua
-              </span>
+        <!-- Left: Brand Logo & Bank Selector -->
+        <div class="flex items-center gap-4">
+          <router-link to="/" class="flex items-center gap-3 group">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-700/20 group-hover:scale-105 transition-transform">
+              <span class="text-xl">⚡</span>
             </div>
-            <p class="text-[11px] text-slate-400">832题艾宾浩斯抗遗忘系统</p>
+            <div>
+              <div class="font-bold text-slate-800 text-base leading-tight flex items-center gap-1.5">
+                <span>艾刷</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono">
+                  aishua
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-400">现代智能题库与科学复习系统</p>
+            </div>
+          </router-link>
+
+          <!-- Bank Selector Dropdown (多题库切换支持) -->
+          <div class="hidden lg:flex items-center">
+            <select
+              :value="quizStore.activeBankId"
+              @change="quizStore.switchBank($event.target.value)"
+              class="text-xs bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-medium py-1.5 px-2.5 rounded-xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+              title="切换当前作答题库"
+            >
+              <option 
+                v-for="b in quizStore.allBanks" 
+                :key="b.id" 
+                :value="b.id"
+              >
+                📚 {{ b.name }} ({{ b.count }}题)
+              </option>
+            </select>
           </div>
-        </router-link>
+        </div>
 
         <!-- Center: Desktop Nav -->
         <nav class="hidden md:flex items-center gap-1">
@@ -37,7 +57,7 @@
               $route.query.mode === 'ebbinghaus' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             ]"
           >
-            <span>🧠 艾宾浩斯复习</span>
+            <span>🧠 智能复习</span>
             <span 
               v-if="quizStore.dueTodayCount > 0" 
               class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white animate-pulse"
@@ -53,7 +73,7 @@
               $route.path === '/categories' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             ]"
           >
-            📑 分类专项
+            📑 题库与专题
           </router-link>
 
           <router-link 
@@ -79,7 +99,7 @@
               $route.path === '/exam' ? 'text-emerald-700 bg-emerald-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             ]"
           >
-            📝 全真模考
+            📝 模拟考
           </router-link>
         </nav>
 
@@ -129,17 +149,17 @@
             @click="triggerManualSync"
             :disabled="isSyncing"
             class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-semibold flex items-center gap-1 transition-colors"
-            title="一键手动全量同步全部 832 题数据到云端"
+            title="一键手动全量同步当前题库进度到云端"
           >
             <span :class="{ 'animate-spin': isSyncing }">🔄</span>
-            <span class="hidden sm:inline text-[11px]">手动同步</span>
+            <span class="hidden sm:inline text-[11px]">同步</span>
           </button>
 
           <!-- 设置入口 -->
           <router-link 
             to="/settings"
             class="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-            title="系统设置与数据备份"
+            title="系统设置与题库导入"
           >
             ⚙️
           </router-link>
@@ -153,11 +173,11 @@
         看板
       </router-link>
       <router-link to="/practice?mode=ebbinghaus" class="py-1 px-2 text-slate-600 relative" :class="{ 'text-emerald-700 font-bold': $route.query.mode === 'ebbinghaus' }">
-        艾宾浩斯
+        智能复习
         <span v-if="quizStore.dueTodayCount > 0" class="absolute -top-1 -right-2 w-2 h-2 bg-rose-500 rounded-full"></span>
       </router-link>
       <router-link to="/categories" class="py-1 px-2 text-slate-600" :class="{ 'text-emerald-700 font-bold': $route.path === '/categories' }">
-        专项
+        专题
       </router-link>
       <router-link to="/wrong-book" class="py-1 px-2 text-slate-600" :class="{ 'text-emerald-700 font-bold': $route.path === '/wrong-book' }">
         错题
