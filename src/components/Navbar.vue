@@ -1,8 +1,8 @@
 <template>
   <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
     <div class="w-full max-w-[1536px] mx-auto px-4 sm:px-6">
-      <div class="flex items-center justify-between h-16 gap-3">
-        <!-- Left: Brand Logo & Bank Selector -->
+      <div class="flex items-center justify-between h-16 gap-4">
+        <!-- Left: Brand Logo (简约极简设计) -->
         <div class="flex items-center gap-3 shrink-0">
           <router-link to="/" class="flex items-center gap-2.5 group shrink-0">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center shadow-sm shadow-emerald-700/20 group-hover:scale-105 transition-transform">
@@ -15,35 +15,14 @@
               </span>
             </div>
           </router-link>
-
-          <!-- Bank Selector Dropdown (多题库切换支持，紧凑设计) -->
-          <div class="hidden lg:flex items-center shrink-0">
-            <div class="relative flex items-center">
-              <select
-                :value="quizStore.activeBankId"
-                @change="quizStore.switchBank($event.target.value)"
-                class="text-xs bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-medium py-1.5 pl-2.5 pr-6 rounded-xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/40 border border-slate-200 max-w-[170px] truncate appearance-none transition-colors"
-                title="切换当前作答题库"
-              >
-                <option 
-                  v-for="b in quizStore.allBanks" 
-                  :key="b.id" 
-                  :value="b.id"
-                >
-                  📚 {{ b.name }} ({{ b.count }}题)
-                </option>
-              </select>
-              <span class="absolute right-2 text-[9px] text-slate-400 pointer-events-none">▼</span>
-            </div>
-          </div>
         </div>
 
-        <!-- Center: Desktop Nav (添加 whitespace-nowrap 绝不折行) -->
-        <nav class="hidden md:flex items-center gap-1 lg:gap-1.5 shrink-0">
+        <!-- Center: Desktop Nav (绝不折行) -->
+        <nav class="hidden md:flex items-center gap-1.5 lg:gap-2 shrink-0">
           <router-link 
             to="/" 
             :class="[
-              'px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
+              'px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
               $route.path === '/' ? 'text-emerald-700 bg-emerald-50 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             ]"
           >
@@ -53,7 +32,7 @@
           <router-link 
             to="/practice?mode=ebbinghaus" 
             :class="[
-              'px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors relative flex items-center gap-1.5',
+              'px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors relative flex items-center gap-1.5',
               $route.query.mode === 'ebbinghaus' ? 'text-emerald-700 bg-emerald-50 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             ]"
           >
@@ -69,7 +48,7 @@
           <router-link 
             to="/categories" 
             :class="[
-              'px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
+              'px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
               $route.path === '/categories' ? 'text-emerald-700 bg-emerald-50 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             ]"
           >
@@ -79,7 +58,7 @@
           <router-link 
             to="/wrong-book" 
             :class="[
-              'px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
+              'px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5',
               $route.path === '/wrong-book' ? 'text-emerald-700 bg-emerald-50 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             ]"
           >
@@ -95,7 +74,7 @@
           <router-link 
             to="/exam" 
             :class="[
-              'px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
+              'px-3.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
               $route.path === '/exam' ? 'text-emerald-700 bg-emerald-50 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             ]"
           >
@@ -103,8 +82,8 @@
           </router-link>
         </nav>
 
-        <!-- Right: Status & Actions (保持精简与单行对齐) -->
-        <div class="flex items-center gap-2 shrink-0">
+        <!-- Right: Status & Actions -->
+        <div class="flex items-center gap-2.5 shrink-0">
           <!-- 打卡天数徽章 -->
           <div 
             v-if="quizStore.streakDays > 0"
@@ -115,7 +94,7 @@
             <span>{{ quizStore.streakDays }}天</span>
           </div>
 
-          <!-- 云端同步状态胶囊按钮 (精简文字) -->
+          <!-- 云端同步状态胶囊按钮 -->
           <button 
             @click="isSyncModalOpen = true"
             :class="[
@@ -158,7 +137,7 @@
           <router-link 
             to="/settings"
             class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors shrink-0"
-            title="系统设置与题库导入"
+            title="系统设置与题库管理"
           >
             ⚙️
           </router-link>
