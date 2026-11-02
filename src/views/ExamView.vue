@@ -1,46 +1,127 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
     <!-- 1. Exam Not Started Screen -->
-    <div v-if="!isStarted && !isSubmitted" class="bg-white rounded-3xl p-8 sm:p-12 border border-slate-200 shadow-sm text-center space-y-6">
-      <div class="w-20 h-20 rounded-3xl bg-amber-100 text-amber-700 flex items-center justify-center text-4xl mx-auto shadow-sm">
+    <div v-if="!isStarted && !isSubmitted" class="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-sm text-center space-y-6">
+      <div class="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-3xl mx-auto shadow-sm">
         🏆
       </div>
       <div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800">
-          全真模拟考试 · 综合水平自测
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-800">
+          模拟考试
         </h1>
-        <p class="text-slate-500 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
-          全真机考模拟环境，基于当前题库（{{ quizStore.currentBank.name }}）自动抽题组卷，限时倒计时，即时出分与错题诊断。
-        </p>
       </div>
 
-      <!-- Exam Rules Card -->
-      <div class="max-w-md mx-auto bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left text-xs space-y-3 text-slate-600">
-        <div class="font-bold text-slate-800 text-sm">📋 考卷结构与规则：</div>
-        <div class="flex justify-between py-1 border-b border-slate-200/60">
-          <span>单选题 (每题 1 分)</span>
-          <span class="font-semibold text-slate-800">{{ singleMaxCount }} 题</span>
+      <!-- Exam Customization Card -->
+      <div class="max-w-md mx-auto bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left text-xs space-y-4 text-slate-700">
+        <div class="flex items-center justify-between">
+          <div class="font-bold text-slate-800 text-sm">📋 考卷题目配置：</div>
+          <button 
+            @click="resetToDefaultCounts"
+            class="text-[11px] text-emerald-600 hover:text-emerald-700 font-medium underline"
+            title="恢复为默认数量 (50 / 30 / 20)"
+          >
+            恢复默认
+          </button>
         </div>
-        <div class="flex justify-between py-1 border-b border-slate-200/60">
-          <span>多选题 (每题 2 分，多/漏/错选均不得分)</span>
-          <span class="font-semibold text-slate-800">{{ multiMaxCount }} 题</span>
+
+        <!-- 1. 单选题设置 -->
+        <div class="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+          <div>
+            <div class="font-semibold text-slate-800">单选题 (每题 1 分)</div>
+            <div class="text-[10px] text-slate-400">题库共有 {{ availableSingles }} 题</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button 
+              type="button"
+              @click="customSingleCount = Math.max(0, customSingleCount - 5)"
+              class="w-7 h-7 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-bold text-slate-600 flex items-center justify-center transition-colors shadow-2xs"
+            >-</button>
+            <input 
+              v-model.number="customSingleCount" 
+              type="number" 
+              min="0" 
+              :max="availableSingles"
+              @blur="clampCounts"
+              class="w-14 text-center py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            <button 
+              type="button"
+              @click="customSingleCount = Math.min(availableSingles, customSingleCount + 5)"
+              class="w-7 h-7 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-bold text-slate-600 flex items-center justify-center transition-colors shadow-2xs"
+            >+</button>
+          </div>
         </div>
-        <div class="flex justify-between py-1 border-b border-slate-200/60">
-          <span>判断题 (每题 1 分)</span>
-          <span class="font-semibold text-slate-800">{{ judgeMaxCount }} 题</span>
+
+        <!-- 2. 多选题设置 -->
+        <div class="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+          <div>
+            <div class="font-semibold text-slate-800">多选题 (每题 2 分)</div>
+            <div class="text-[10px] text-slate-400">题库共有 {{ availableMultis }} 题</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button 
+              type="button"
+              @click="customMultiCount = Math.max(0, customMultiCount - 5)"
+              class="w-7 h-7 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-bold text-slate-600 flex items-center justify-center transition-colors shadow-2xs"
+            >-</button>
+            <input 
+              v-model.number="customMultiCount" 
+              type="number" 
+              min="0" 
+              :max="availableMultis"
+              @blur="clampCounts"
+              class="w-14 text-center py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            <button 
+              type="button"
+              @click="customMultiCount = Math.min(availableMultis, customMultiCount + 5)"
+              class="w-7 h-7 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-bold text-slate-600 flex items-center justify-center transition-colors shadow-2xs"
+            >+</button>
+          </div>
         </div>
+
+        <!-- 3. 判断题设置 -->
+        <div class="flex items-center justify-between py-1.5 border-b border-slate-200/60">
+          <div>
+            <div class="font-semibold text-slate-800">判断题 (每题 1 分)</div>
+            <div class="text-[10px] text-slate-400">题库共有 {{ availableJudges }} 题</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button 
+              type="button"
+              @click="customJudgeCount = Math.max(0, customJudgeCount - 5)"
+              class="w-7 h-7 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-bold text-slate-600 flex items-center justify-center transition-colors shadow-2xs"
+            >-</button>
+            <input 
+              v-model.number="customJudgeCount" 
+              type="number" 
+              min="0" 
+              :max="availableJudges"
+              @blur="clampCounts"
+              class="w-14 text-center py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            <button 
+              type="button"
+              @click="customJudgeCount = Math.min(availableJudges, customJudgeCount + 5)"
+              class="w-7 h-7 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-bold text-slate-600 flex items-center justify-center transition-colors shadow-2xs"
+            >+</button>
+          </div>
+        </div>
+
+        <!-- Summary -->
         <div class="flex justify-between font-bold text-slate-800 pt-1">
-          <span>满分 / 及格线</span>
-          <span>{{ maxPossibleScore }} 分 / {{ Math.round(maxPossibleScore * 0.6) }} 分及格 (60%)</span>
+          <span>总题数 / 满分 / 及格线</span>
+          <span>{{ totalExamQuestionsCount }} 题 / {{ maxPossibleScore }} 分 / {{ passScore }} 分及格</span>
         </div>
       </div>
 
       <div>
         <button
           @click="startExam"
-          class="px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base shadow-lg shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95"
+          :disabled="totalExamQuestionsCount === 0"
+          class="px-8 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-base shadow-lg shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95"
         >
-          开始模拟考 (共 {{ singleMaxCount + multiMaxCount + judgeMaxCount }} 题) →
+          开始模拟考 (共 {{ totalExamQuestionsCount }} 题) →
         </button>
       </div>
     </div>
@@ -162,18 +243,18 @@
         <div class="grid grid-cols-3 gap-3 max-w-lg mx-auto">
           <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
             <div class="text-xs text-slate-400 font-medium">单选题得分</div>
-            <div class="text-xl font-bold text-slate-800 mt-1">{{ singleScore }} / {{ singleMaxCount * 1 }}</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ singleCorrect }}/{{ singleMaxCount }} 题</div>
+            <div class="text-xl font-bold text-slate-800 mt-1">{{ singleScore }} / {{ actualSingleCount * 1 }}</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ singleCorrect }}/{{ actualSingleCount }} 题</div>
           </div>
           <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
             <div class="text-xs text-slate-400 font-medium">多选题得分</div>
-            <div class="text-xl font-bold text-slate-800 mt-1">{{ multiScore }} / {{ multiMaxCount * 2 }}</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ multiCorrect }}/{{ multiMaxCount }} 题</div>
+            <div class="text-xl font-bold text-slate-800 mt-1">{{ multiScore }} / {{ actualMultiCount * 2 }}</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ multiCorrect }}/{{ actualMultiCount }} 题</div>
           </div>
           <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
             <div class="text-xs text-slate-400 font-medium">判断题得分</div>
-            <div class="text-xl font-bold text-slate-800 mt-1">{{ judgeScore }} / {{ judgeMaxCount * 1 }}</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ judgeCorrect }}/{{ judgeMaxCount }} 题</div>
+            <div class="text-xl font-bold text-slate-800 mt-1">{{ judgeScore }} / {{ actualJudgeCount * 1 }}</div>
+            <div class="text-[10px] text-slate-500 mt-0.5">对 {{ judgeCorrect }}/{{ actualJudgeCount }} 题</div>
           </div>
         </div>
 
@@ -213,7 +294,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useQuizStore } from '../stores/quizStore'
 import QuestionCard from '../components/QuestionCard.vue'
 import AnswerDrawer from '../components/AnswerDrawer.vue'
@@ -240,33 +321,86 @@ function shuffle(array) {
   return arr
 }
 
-const singleMaxCount = computed(() => {
-  const count = quizStore.questions.filter(q => q.type === '单选题').length
-  return Math.min(50, count)
+// 题库中可用的题目总量
+const availableSingles = computed(() => {
+  return quizStore.questions.filter(q => q.type === '单选题').length
 })
 
-const multiMaxCount = computed(() => {
-  const count = quizStore.questions.filter(q => q.type === '多选题').length
-  return Math.min(30, count)
+const availableMultis = computed(() => {
+  return quizStore.questions.filter(q => q.type === '多选题').length
 })
 
-const judgeMaxCount = computed(() => {
-  const count = quizStore.questions.filter(q => q.type === '判断题').length
-  return Math.min(20, count)
+const availableJudges = computed(() => {
+  return quizStore.questions.filter(q => q.type === '判断题').length
+})
+
+// 用户自定义抽题数量 (默认值：单选50、多选30、判断20，自适应当前题库可用最大值)
+const customSingleCount = ref(Math.min(50, availableSingles.value))
+const customMultiCount = ref(Math.min(30, availableMultis.value))
+const customJudgeCount = ref(Math.min(20, availableJudges.value))
+
+// 当题库切换时，自动重置并适配默认值
+watch(
+  () => quizStore.activeBankId,
+  () => {
+    resetToDefaultCounts()
+  }
+)
+
+function resetToDefaultCounts() {
+  customSingleCount.value = Math.min(50, availableSingles.value)
+  customMultiCount.value = Math.min(30, availableMultis.value)
+  customJudgeCount.value = Math.min(20, availableJudges.value)
+}
+
+function clampCounts() {
+  customSingleCount.value = Math.max(0, Math.min(availableSingles.value, Number(customSingleCount.value) || 0))
+  customMultiCount.value = Math.max(0, Math.min(availableMultis.value, Number(customMultiCount.value) || 0))
+  customJudgeCount.value = Math.max(0, Math.min(availableJudges.value, Number(customJudgeCount.value) || 0))
+}
+
+// 试卷实际抽取的题目数量（记录在当前考试实例中）
+const actualSingleCount = ref(50)
+const actualMultiCount = ref(30)
+const actualJudgeCount = ref(20)
+
+const totalExamQuestionsCount = computed(() => {
+  return (Number(customSingleCount.value) || 0) + (Number(customMultiCount.value) || 0) + (Number(customJudgeCount.value) || 0)
 })
 
 const maxPossibleScore = computed(() => {
-  return (singleMaxCount.value * 1) + (multiMaxCount.value * 2) + (judgeMaxCount.value * 1)
+  return ((Number(customSingleCount.value) || 0) * 1) + 
+         ((Number(customMultiCount.value) || 0) * 2) + 
+         ((Number(customJudgeCount.value) || 0) * 1)
 })
 
 const passScore = computed(() => Math.round(maxPossibleScore.value * 0.6))
 
 function startExam() {
-  const singles = shuffle(quizStore.questions.filter(q => q.type === '单选题')).slice(0, singleMaxCount.value)
-  const multis = shuffle(quizStore.questions.filter(q => q.type === '多选题')).slice(0, multiMaxCount.value)
-  const judges = shuffle(quizStore.questions.filter(q => q.type === '判断题')).slice(0, judgeMaxCount.value)
+  clampCounts()
+
+  const singlesPool = quizStore.questions.filter(q => q.type === '单选题')
+  const multisPool = quizStore.questions.filter(q => q.type === '多选题')
+  const judgesPool = quizStore.questions.filter(q => q.type === '判断题')
+
+  const targetSingle = Math.min(customSingleCount.value, singlesPool.length)
+  const targetMulti = Math.min(customMultiCount.value, multisPool.length)
+  const targetJudge = Math.min(customJudgeCount.value, judgesPool.length)
+
+  actualSingleCount.value = targetSingle
+  actualMultiCount.value = targetMulti
+  actualJudgeCount.value = targetJudge
+
+  const singles = shuffle(singlesPool).slice(0, targetSingle)
+  const multis = shuffle(multisPool).slice(0, targetMulti)
+  const judges = shuffle(judgesPool).slice(0, targetJudge)
 
   examQuestions.value = [...singles, ...multis, ...judges]
+  if (examQuestions.value.length === 0) {
+    alert('请至少配置抽取 1 道题目以开始考试！')
+    return
+  }
+
   examAnswers.value = {}
   currentIndex.value = 0
   remainingSeconds.value = 3600
