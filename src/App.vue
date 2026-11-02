@@ -10,8 +10,8 @@
     <footer class="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-400">
       <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div class="flex items-center gap-2">
-          <span class="font-bold text-slate-700">⚡ 电网智刷</span>
-          <span>· 832 题艾宾浩斯抗遗忘记忆系统</span>
+          <span class="font-bold text-slate-700">⚡ 艾刷 aishua</span>
+          <span>· 832 题艾宾浩斯抗遗忘精熟系统</span>
         </div>
         <div class="flex items-center gap-4 text-slate-500">
           <span>Vue 3</span>

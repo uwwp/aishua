@@ -9,12 +9,12 @@
           </div>
           <div>
             <div class="font-bold text-slate-800 text-base leading-tight flex items-center gap-1.5">
-              <span>电网智刷</span>
-              <span class="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                Ebbinghaus
+              <span>艾刷</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono">
+                aishua
               </span>
             </div>
-            <p class="text-[11px] text-slate-400">832题抗遗忘精熟系统</p>
+            <p class="text-[11px] text-slate-400">832题艾宾浩斯抗遗忘系统</p>
           </div>
         </router-link>
 
